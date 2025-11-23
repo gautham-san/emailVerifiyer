@@ -1,0 +1,11 @@
+# fastapi
+# uvicorn
+# pydantic
+# py3-validate-email
+# requests
+# dnspython
+
+fastapi 
+uvicorn 
+httpx 
+python-dotenv
