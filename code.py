@@ -12,6 +12,9 @@ app = FastAPI()
 
 HUNTER_API_KEY = os.getenv("HUNTER_API_KEY")  # store the API key in env variable
 
+VERIFALIA_USERNAME = os.getenv("VERIFALIA_USERNAME")
+VERIFALIA_PASSWORD = os.getenv("VERIFALIA_PASSWORD")
+
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/docs")
@@ -41,6 +44,46 @@ async def hunter_find(email: str):
             raise HTTPException(status_code=500, detail=str(e))
 
     if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    return response.json()
+
+
+
+@app.post("/verifalia/validate")
+async def verifalia_validate(email: str):
+    """
+    Calls Verifalia Email Validation API via:
+    curl -u username:password \
+        --compressed \
+        -H "Content-Type: application/json" \
+        -d '{ "entries": [ { "inputData": "batman@gmail.com" } ] }' \
+        https://api.verifalia.com/v2.7/email-validations
+    """
+
+    if not VERIFALIA_USERNAME or not VERIFALIA_PASSWORD:
+        raise HTTPException(status_code=500, detail="VERIFALIA_USERNAME or VERIFALIA_PASSWORD not set.")
+
+    url = "https://api.verifalia.com/v2.7/email-validations"
+
+    payload = {
+        "entries": [
+            {"inputData": email}
+        ]
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            response = await client.post(
+                url,
+                json=payload,
+                auth=(VERIFALIA_USERNAME, VERIFALIA_PASSWORD),
+                headers={"Content-Type": "application/json", "Accept-Encoding": "gzip"}
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    if response.status_code not in (200, 202):
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     return response.json()
